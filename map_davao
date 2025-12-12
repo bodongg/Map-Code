@@ -1,0 +1,291 @@
+import folium
+from folium.plugins import MousePosition
+import webbrowser
+import os
+
+
+class DavaoTaxiSystem:
+    def __init__(self):
+        self.davao_center = [7.0731, 125.6128]
+
+    def create_map(self):
+        """Create interactive map with click functionality"""
+
+        # Create base map
+        m = folium.Map(
+            location=self.davao_center,
+            zoom_start=13,
+            tiles='OpenStreetMap'
+        )
+
+        # Add mouse position tracker
+        MousePosition().add_to(m)
+
+        # Add custom HTML/CSS/JavaScript
+        custom_code = """
+        <!DOCTYPE html>
+        <style>
+            #control-panel {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                z-index: 1000;
+                width: 320px;
+                font-family: Arial, sans-serif;
+            }
+            .info-box {
+                padding: 10px;
+                margin: 8px 0;
+                border-radius: 5px;
+                border-left: 4px solid;
+            }
+            .pickup-box {
+                background: #d1fae5;
+                border-color: #10b981;
+            }
+            .destination-box {
+                background: #fee2e2;
+                border-color: #ef4444;
+            }
+            .distance-box {
+                background: #dbeafe;
+                border-color: #2563eb;
+            }
+            .btn {
+                padding: 10px 15px;
+                margin: 5px 2px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+                color: white;
+                width: 100%;
+            }
+            .btn-pickup { background: #10b981; }
+            .btn-destination { background: #ef4444; }
+            .btn-clear { background: #6b7280; }
+            .btn:hover { opacity: 0.8; }
+            .title {
+                color: #1e40af;
+                margin: 0 0 15px 0;
+            }
+        </style>
+
+        <div id="control-panel">
+            <h3 class="title">📍 Taxi Booking</h3>
+            <div id="status">Click on map to set pickup location</div>
+            <div id="info-display"></div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-pickup" onclick="setMode('pickup')">🚖 Set Pickup</button>
+                <button class="btn btn-destination" onclick="setMode('destination')">🎯 Set Destination</button>
+                <button class="btn btn-clear" onclick="clearAll()">🗑️ Clear All</button>
+            </div>
+        </div>
+
+        <script>
+            var pickupMarker = null;
+            var destinationMarker = null;
+            var pickupCoords = null;
+            var destinationCoords = null;
+            var currentMode = 'pickup';
+            var routeLine = null;
+
+            // Green icon for pickup
+            var greenIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iNDUiIHZpZXdCb3g9IjAgMCAzMCA0NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTUgMEM5LjUgMCA1IDQuNSA1IDEwYzAgNy41IDEwIDIwIDEwIDIwczEwLTEyLjUgMTAtMjBjMC01LjUtNC41LTEwLTEwLTEweiIgZmlsbD0iIzEwYjk4MSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTUiIHk9IjE1IiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPFA8L3RleHQ+PC9zdmc+',
+                iconSize: [30, 45],
+                iconAnchor: [15, 45],
+                popupAnchor: [0, -45]
+            });
+
+            // Red icon for destination
+            var redIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iNDUiIHZpZXdCb3g9IjAgMCAzMCA0NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTUgMEM5LjUgMCA1IDQuNSA1IDEwYzAgNy41IDEwIDIwIDEwIDIwczEwLTEyLjUgMTAtMjBjMC01LjUtNC41LTEwLTEwLTEweiIgZmlsbD0iI2VmNDQ0NCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTUiIHk9IjE1IiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkQ8L3RleHQ+PC9zdmc+',
+                iconSize: [30, 45],
+                iconAnchor: [15, 45],
+                popupAnchor: [0, -45]
+            });
+
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                var R = 6371;
+                var dLat = (lat2 - lat1) * Math.PI / 180;
+                var dLon = (lon2 - lon1) * Math.PI / 180;
+                var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                        Math.sin(dLon/2) * Math.sin(dLon/2);
+                var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return (R * c).toFixed(2);
+            }
+
+            function updateDisplay() {
+                var html = '';
+                var status = '';
+
+                if (pickupCoords) {
+                    html += '<div class="info-box pickup-box">';
+                    html += '<strong>🚖 Pickup:</strong><br>';
+                    html += 'Lat: ' + pickupCoords.lat.toFixed(6) + '<br>';
+                    html += 'Lng: ' + pickupCoords.lng.toFixed(6);
+                    html += '</div>';
+                }
+
+                if (destinationCoords) {
+                    html += '<div class="info-box destination-box">';
+                    html += '<strong>🎯 Destination:</strong><br>';
+                    html += 'Lat: ' + destinationCoords.lat.toFixed(6) + '<br>';
+                    html += 'Lng: ' + destinationCoords.lng.toFixed(6);
+                    html += '</div>';
+                }
+
+                if (pickupCoords && destinationCoords) {
+                    var dist = calculateDistance(
+                        pickupCoords.lat, pickupCoords.lng,
+                        destinationCoords.lat, destinationCoords.lng
+                    );
+                    var fare = (dist * 15).toFixed(2);
+
+                    html += '<div class="info-box distance-box">';
+                    html += '<strong>📏 Distance:</strong> ' + dist + ' km<br>';
+                    html += '<strong>💰 Est. Fare:</strong> ₱' + fare;
+                    html += '</div>';
+
+                    // Draw route line
+                    if (routeLine) {
+                        map.removeLayer(routeLine);
+                    }
+                    routeLine = L.polyline([
+                        [pickupCoords.lat, pickupCoords.lng],
+                        [destinationCoords.lat, destinationCoords.lng]
+                    ], {
+                        color: '#3b82f6',
+                        weight: 3,
+                        opacity: 0.7,
+                        dashArray: '10, 5'
+                    }).addTo(map);
+
+                    status = '✅ Booking complete!';
+                } else if (pickupCoords) {
+                    status = 'Now click to set destination';
+                } else {
+                    status = 'Click on map to set pickup location';
+                }
+
+                document.getElementById('info-display').innerHTML = html;
+                document.getElementById('status').innerHTML = status;
+            }
+
+            function setMode(mode) {
+                currentMode = mode;
+                if (mode === 'pickup') {
+                    document.getElementById('status').innerHTML = 'Click on map to set pickup location';
+                } else {
+                    document.getElementById('status').innerHTML = 'Click on map to set destination';
+                }
+            }
+
+            function clearAll() {
+                if (pickupMarker) map.removeLayer(pickupMarker);
+                if (destinationMarker) map.removeLayer(destinationMarker);
+                if (routeLine) map.removeLayer(routeLine);
+
+                pickupMarker = null;
+                destinationMarker = null;
+                pickupCoords = null;
+                destinationCoords = null;
+                routeLine = null;
+                currentMode = 'pickup';
+
+                updateDisplay();
+            }
+
+            // Map click handler
+            map.on('click', function(e) {
+                if (currentMode === 'pickup') {
+                    if (pickupMarker) map.removeLayer(pickupMarker);
+
+                    pickupMarker = L.marker([e.latlng.lat, e.latlng.lng], {icon: greenIcon})
+                        .addTo(map)
+                        .bindPopup('<b>🚖 Pickup Location</b>')
+                        .openPopup();
+
+                    pickupCoords = e.latlng;
+                    currentMode = 'destination';
+
+                } else if (currentMode === 'destination') {
+                    if (destinationMarker) map.removeLayer(destinationMarker);
+
+                    destinationMarker = L.marker([e.latlng.lat, e.latlng.lng], {icon: redIcon})
+                        .addTo(map)
+                        .bindPopup('<b>🎯 Destination</b>')
+                        .openPopup();
+
+                    destinationCoords = e.latlng;
+                }
+
+                updateDisplay();
+            });
+
+            // Initialize
+            updateDisplay();
+        </script>
+        """
+
+        # Add the custom code to the map
+        m.get_root().html.add_child(folium.Element(custom_code))
+
+        # Add landmarks
+        landmarks = [
+            {"name": "SM City Davao", "coords": [7.0731, 125.6128]},
+            {"name": "Abreeza Mall", "coords": [7.0944, 125.6177]},
+            {"name": "Davao Airport", "coords": [7.1252, 125.6458]},
+            {"name": "People's Park", "coords": [7.0707, 125.6086]},
+            {"name": "Philippine Eagle Center", "coords": [7.1014, 125.5447]},
+            {"name": "San Pedro Cathedral", "coords": [7.0644, 125.6089]},
+            {"name": "Davao Crocodile Park", "coords": [7.1103, 125.6531]},
+            {"name": "Roxas Night Market", "coords": [7.0644, 125.6078]},
+        ]
+
+        for landmark in landmarks:
+            folium.Marker(
+                landmark["coords"],
+                popup=f"<b>{landmark['name']}</b>",
+                tooltip=landmark["name"],
+                icon=folium.Icon(color='blue', icon='info-sign')
+            ).add_to(m)
+
+        return m
+
+    def run(self):
+        """Run the taxi booking system"""
+        print("🚕 Starting Davao City Taxi Booking System...")
+        print("=" * 50)
+
+        # Create map
+        taxi_map = self.create_map()
+
+        # Save to file
+        filename = 'davao_taxi_map.html'
+        taxi_map.save(filename)
+
+        print(f"✅ Map saved as '{filename}'")
+        print(f"📂 Location: {os.path.abspath(filename)}")
+
+        # Open in browser
+        webbrowser.open(f'file://{os.path.abspath(filename)}')
+
+        print("🌐 Opening map in browser...")
+        print("\n📝 How to use:")
+        print("1. Click anywhere on the map for PICKUP (green marker)")
+        print("2. Click 'Set Destination' then click for DESTINATION (red marker)")
+        print("3. Distance and fare calculated automatically!")
+        print("4. Use 'Clear All' to reset")
+        print("\n✨ Map is ready! Start clicking!")
+
+
+if __name__ == "__main__":
+    system = DavaoTaxiSystem()
+    system.run()
