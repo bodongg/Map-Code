@@ -1,324 +1,139 @@
+# menu_frame.py - Menu Frame WITHOUT Blue Highlights & Better Spacing
+
 import tkinter as tk
-from tkinter import font
-from PIL import Image, ImageTk, ImageDraw
+from tkinter import Canvas
+from PIL import Image, ImageTk
 
 
-class ProfileApp:
+class MenuFrame:
     def __init__(self, root):
         self.root = root
-        self.root.title("Profile App")
-        self.root.geometry("428x924")
+        self.root.title("QuickCab Menu")
+
+        # Window dimensions 428x926
+        self.root.geometry("428x926")
         self.root.resizable(False, False)
 
-        # Store icon images
-        self.icons = {}
-        self.load_icons()
+        # Load images
+        self.load_images()
 
-        # Store profile data
-        self.profile_data = {
-            'name': 'Xander Calzado',
-            'email': 'calzadoxander@gmail.com',
-            'phone': '+09264980584',
-            'gender': '',
-            'birthday': ''
-        }
+        # Create menu frame using Canvas
+        self.create_menu()
 
-        # Show side menu by default
-        self.show_side_menu()
+    def load_images(self):
+        """Load all PNG images"""
+        IMAGE_FOLDER = "Python Frames/"
 
-    def load_icons(self):
-        """Load icon images for the input fields"""
-        # We'll use simple text/unicode symbols instead
-        pass
+        # Load menu background
+        try:
+            img = Image.open(IMAGE_FOLDER + "Left-Menu page.png")
+            img = img.resize((428, 926), Image.Resampling.LANCZOS)
+            self.menu_bg = ImageTk.PhotoImage(img)
+            print("✅ Loaded: Left-Menu page.png")
+        except Exception as e:
+            print(f"❌ Error loading background: {e}")
+            self.menu_bg = None
 
-    def show_side_menu(self):
-        """Display the side menu drawer"""
-        # Clear current content
-        for widget in self.root.winfo_children():
-            widget.destroy()
+        # Load white menu button
+        try:
+            img = Image.open(IMAGE_FOLDER + "MENU BUTTON WHITE.png")
+            img = img.resize((30, 20), Image.Resampling.LANCZOS)
+            self.menu_btn_img = ImageTk.PhotoImage(img)
+            print("✅ Loaded: MENU BUTTON WHITE.png")
+        except Exception as e:
+            print(f"❌ Error loading menu button: {e}")
+            self.menu_btn_img = None
 
-        # Create main frame with gradient background
-        self.main_frame = tk.Frame(self.root, bg="#4338ca")
-        self.main_frame.pack(fill="both", expand=True)
+        # Load profile picture
+        try:
+            img = Image.open(IMAGE_FOLDER + "PROFILE FOR MENU.png")
+            img = img.resize((80, 80), Image.Resampling.LANCZOS)
+            self.profile_img = ImageTk.PhotoImage(img)
+            print("✅ Loaded: PROFILE FOR MENU.png")
+        except Exception as e:
+            print(f"❌ Error loading profile: {e}")
+            self.profile_img = None
 
-        # Create canvas for gradient effect
-        self.canvas = tk.Canvas(self.main_frame, width=428, height=924,
-                                highlightthickness=0)
+    def create_menu(self):
+        """Create the menu frame using Canvas (NO HIGHLIGHTS, BETTER SPACING)"""
+        # Create canvas for drawing
+        self.canvas = Canvas(
+            self.root,
+            width=428,
+            height=926,
+            bg="#3D5AFE",
+            highlightthickness=0,
+            borderwidth=0
+        )
         self.canvas.pack(fill="both", expand=True)
 
-        # Draw gradient background
-        self.draw_gradient()
+        # Draw background image
+        if self.menu_bg:
+            self.canvas.create_image(0, 0, image=self.menu_bg, anchor="nw")
 
-        # Menu icon (hamburger menu)
-        self.draw_menu_icon()
+        # Add white menu button directly on canvas (NO HIGHLIGHT BOX)
+        if self.menu_btn_img:
+            self.canvas.create_image(25, 35, image=self.menu_btn_img, anchor="center")
 
-        # Profile section
-        self.create_profile_section()
+        # Add profile picture
+        if self.profile_img:
+            self.canvas.create_image(30, 90, image=self.profile_img, anchor="nw")
 
-        # Menu items
-        self.create_menu_items()
+        # Draw "Frank Smith" text directly on canvas (NO BACKGROUND)
+        self.canvas.create_text(
+            30, 185,
+            text="Xander Calzado",
+            font=("Poppins", 18, "bold"),
+            fill="white",
+            anchor="w"
+        )
 
-    def draw_gradient(self):
-        """Draw gradient background from indigo-600 to indigo-700"""
-        for i in range(924):
-            # Interpolate between colors
-            ratio = i / 924
-            r = int(67 + (55 - 67) * ratio)
-            g = int(56 + (48 - 56) * ratio)
-            b = int(202 + (164 - 202) * ratio)
-            color = f'#{r:02x}{g:02x}{b:02x}'
-            self.canvas.create_line(0, i, 428, i, fill=color)
-
-    def draw_menu_icon(self):
-        """Draw hamburger menu icon"""
-        x, y = 28, 48
-        line_width = 24
-
-        for i in range(3):
-            y_pos = y + (i * 8)
-            self.canvas.create_line(x, y_pos, x + line_width, y_pos,
-                                    fill="white", width=2)
-
-    def create_profile_section(self):
-        """Create profile picture and name"""
-        # Create the actual profile image from the circular photo
-        try:
-            # This is your circular profile image - replace with actual file path
-            image_path = "xander_profile.png"  # SAVE YOUR CIRCULAR IMAGE AS THIS NAME
-
-            img = Image.open(image_path)
-
-            # Resize to 80x80 maintaining aspect ratio
-            img = img.resize((80, 80), Image.Resampling.LANCZOS)
-
-            # Create white border background
-            border_size = 88
-            border_img = Image.new('RGBA', (border_size, border_size), (255, 255, 255, 0))
-
-            # Draw white circle for border
-            border_draw = ImageDraw.Draw(border_img)
-            border_draw.ellipse([0, 0, border_size - 1, border_size - 1], fill='white')
-
-            # Paste the profile image in center (4px border on all sides)
-            if img.mode != 'RGBA':
-                img = img.convert('RGBA')
-
-            border_img.paste(img, (4, 4), img)
-
-            self.profile_photo = ImageTk.PhotoImage(border_img)
-            self.canvas.create_image(214, 140, image=self.profile_photo)
-
-        except Exception as e:
-            print(f"Error loading image: {e}")
-            print("Please save your circular profile image as 'xander_profile.png'")
-            # Fallback: draw a simple circle if image not found
-            self.canvas.create_oval(170, 96, 258, 184,
-                                    fill="#e5e7eb", outline="white", width=4)
-            self.canvas.create_text(214, 140, text="XC",
-                                    font=("Poppins", 24, "bold"), fill="#6b7280")
-
-        # Name label
-        name_font = font.Font(family="Poppins", size=20, weight="bold")
-        self.canvas.create_text(214, 210, text=self.profile_data['name'],
-                                font=name_font, fill="white")
-
-    def create_menu_items(self):
-        """Create menu items"""
-        menu_font = font.Font(family="Poppins", size=16)
-
-        # My Account - Make it clickable
-        my_account_btn = self.canvas.create_text(60, 320, text="My Account",
-                                                 font=menu_font, fill="white", anchor="w")
-        self.canvas.tag_bind(my_account_btn, "<Button-1>", lambda e: self.show_edit_profile())
-        self.canvas.tag_bind(my_account_btn, "<Enter>", lambda e: self.canvas.config(cursor="hand2"))
-        self.canvas.tag_bind(my_account_btn, "<Leave>", lambda e: self.canvas.config(cursor=""))
-
-        # Other menu items
-        other_items = [
-            "Notification",
-            "About",
-            "Privacy Policy",
-            "Terms & Condition"
+        # Draw menu items with PROPER SPACING (60px between each item)
+        menu_items = [
+            ("My Account", 280),
+            ("Notification", 340),
+            ("About", 400),
+            ("Privacy Policy", 460),
+            ("Terms & Condition", 520)
         ]
 
-        y_position = 372
-        for item in other_items:
-            self.canvas.create_text(60, y_position, text=item,
-                                    font=menu_font, fill="white", anchor="w")
-            y_position += 52
+        for item_text, y_pos in menu_items:
+            text_id = self.canvas.create_text(
+                30, y_pos,
+                text=item_text,
+                font=("Poppins", 16),
+                fill="white",
+                anchor="w"
+            )
+            # Make text clickable
+            self.canvas.tag_bind(text_id, "<Button-1>",
+                                 lambda e, t=item_text: print(f"{t} clicked"))
+            self.canvas.tag_bind(text_id, "<Enter>",
+                                 lambda e: self.root.config(cursor="hand2"))
+            self.canvas.tag_bind(text_id, "<Leave>",
+                                 lambda e: self.root.config(cursor=""))
 
-        # Switch Account and Logout at bottom
-        bottom_font = font.Font(family="Poppins", size=16)
-        self.canvas.create_text(60, 820, text="Switch Account",
-                                font=bottom_font, fill="white", anchor="w")
-        self.canvas.create_text(60, 858, text="Logout",
-                                font=bottom_font, fill="white", anchor="w")
-
-    def show_edit_profile(self):
-        """Display the Edit Profile screen"""
-        # Clear current content
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        # Create main frame with light background
-        main_frame = tk.Frame(self.root, bg="#e8e9f0")
-        main_frame.pack(fill="both", expand=True)
-
-        # Header section
-        header_frame = tk.Frame(main_frame, bg="#e8e9f0", height=100)
-        header_frame.pack(fill="x", pady=20)
-
-        # Back button
-        back_btn = tk.Button(header_frame, text="<", font=("Poppins", 18),
-                             bg="white", fg="#000", bd=0, padx=15, pady=5,
-                             command=self.show_side_menu, cursor="hand2")
-        back_btn.place(x=20, y=10)
-
-        # Title
-        title_label = tk.Label(header_frame, text="Edit Profile",
-                               font=("Poppins", 20, "bold"), bg="#e8e9f0", fg="#000")
-        title_label.place(x=140, y=15)
-
-        # Profile picture section
-        profile_frame = tk.Frame(main_frame, bg="#e8e9f0")
-        profile_frame.pack(pady=20)
-
-        # Load profile image
-        try:
-            img = Image.open("xander_profile.png")
-            img = img.resize((120, 120), Image.Resampling.LANCZOS)
-
-            if img.mode != 'RGBA':
-                img = img.convert('RGBA')
-
-            self.edit_profile_photo = ImageTk.PhotoImage(img)
-            profile_label = tk.Label(profile_frame, image=self.edit_profile_photo, bg="#e8e9f0")
-            profile_label.pack()
-        except:
-            # Fallback circle
-            canvas = tk.Canvas(profile_frame, width=120, height=120, bg="#e8e9f0", highlightthickness=0)
-            canvas.pack()
-            canvas.create_oval(10, 10, 110, 110, fill="#ccc", outline="")
-            canvas.create_text(60, 60, text="XC", font=("Poppins", 24, "bold"), fill="#666")
-
-        # Camera icon button (small blue circle)
-        camera_btn = tk.Label(profile_frame, text="📷", font=("Arial", 16),
-                              bg="#4338ca", fg="white", width=2, height=1)
-        camera_btn.place(x=90, y=85)
-
-        # Input fields frame
-        fields_frame = tk.Frame(main_frame, bg="#e8e9f0")
-        fields_frame.pack(pady=20, padx=30, fill="both", expand=True)
-
-        # Store entry fields for later access
-        self.entry_fields = {}
-
-        # Name field
-        self.entry_fields['name'] = self.create_input_field(fields_frame, 'user', self.profile_data['name'], 0)
-
-        # Email field
-        self.entry_fields['email'] = self.create_input_field(fields_frame, 'email', self.profile_data['email'], 1)
-
-        # Phone field
-        self.entry_fields['phone'] = self.create_input_field(fields_frame, 'phone', self.profile_data['phone'], 2)
-
-        # Gender field
-        self.entry_fields['gender'] = self.create_input_field(fields_frame, 'gender', self.profile_data['gender'], 3)
-
-        # Birthday field
-        self.entry_fields['birthday'] = self.create_input_field(fields_frame, 'birthday', self.profile_data['birthday'],
-                                                                4)
-
-        # Update Profile button
-        update_btn = tk.Button(main_frame, text="Update Profile",
-                               font=("Poppins", 16, "bold"),
-                               bg="#4338ca", fg="white",
-                               bd=0, padx=40, pady=15,
-                               cursor="hand2",
-                               command=self.update_profile_data)
-        update_btn.pack(pady=30)
-
-    def update_profile_data(self):
-        """Handle profile update"""
-        # Get values from all entry fields and update stored data
-        self.profile_data['name'] = self.entry_fields['name'].get()
-        self.profile_data['email'] = self.entry_fields['email'].get()
-        self.profile_data['phone'] = self.entry_fields['phone'].get()
-        self.profile_data['gender'] = self.entry_fields['gender'].get()
-        self.profile_data['birthday'] = self.entry_fields['birthday'].get()
-
-        # Print to console for verification
-        print("Profile Updated!")
-        print(f"Name: {self.profile_data['name']}")
-        print(f"Email: {self.profile_data['email']}")
-        print(f"Phone: {self.profile_data['phone']}")
-        print(f"Gender: {self.profile_data['gender']}")
-        print(f"Birthday: {self.profile_data['birthday']}")
-
-        # Show success message
-        self.show_success_message()
-
-    def show_success_message(self):
-        """Show a success popup message"""
-        # Create a popup window
-        popup = tk.Toplevel(self.root)
-        popup.title("Success")
-        popup.geometry("300x150")
-        popup.configure(bg="white")
-        popup.resizable(False, False)
-
-        # Center the popup
-        popup.transient(self.root)
-        popup.grab_set()
-
-        # Success message
-        success_label = tk.Label(popup, text="✓", font=("Arial", 40),
-                                 bg="white", fg="#4338ca")
-        success_label.pack(pady=20)
-
-        message_label = tk.Label(popup, text="Profile Updated Successfully!",
-                                 font=("Poppins", 12), bg="white", fg="#333")
-        message_label.pack()
-
-        # OK button
-        ok_btn = tk.Button(popup, text="OK", font=("Poppins", 12, "bold"),
-                           bg="#4338ca", fg="white", bd=0, padx=30, pady=8,
-                           cursor="hand2",
-                           command=popup.destroy)
-        ok_btn.pack(pady=20)
-
-    def create_input_field(self, parent, icon_key, placeholder, row):
-        """Create an input field with icon"""
-        field_frame = tk.Frame(parent, bg="white", height=50)
-        field_frame.pack(fill="x", pady=8)
-        field_frame.pack_propagate(False)
-
-        # Simple text-based icons that look clean
-        icon_symbols = {
-            'user': '👤',
-            'email': '✉',
-            'phone': '📞',
-            'gender': '⚥',
-            'birthday': '🎂'
-        }
-
-        # Icon label using simple symbols with fixed width for alignment
-        icon_label = tk.Label(field_frame, text=icon_symbols.get(icon_key, '•'),
-                              font=("Segoe UI", 16), bg="white", fg="#4a4a4a",
-                              width=2, anchor="center")
-        icon_label.pack(side="left", padx=(12, 8))
-
-        # Entry field with left alignment
-        entry = tk.Entry(field_frame, font=("Poppins", 14),
-                         bg="white", fg="#333", bd=0, justify="left")
-        if placeholder:
-            entry.insert(0, placeholder)
-        entry.pack(side="left", fill="both", expand=True, padx=(5, 15))
-
-        return entry
+        # Draw "Logout" text lower at bottom (NO BACKGROUND)
+        logout_id = self.canvas.create_text(
+            30, 850,
+            text="Logout",
+            font=("Poppins", 16),
+            fill="white",
+            anchor="w"
+        )
+        # Make logout clickable
+        self.canvas.tag_bind(logout_id, "<Button-1>",
+                             lambda e: print("Logout clicked"))
+        self.canvas.tag_bind(logout_id, "<Enter>",
+                             lambda e: self.root.config(cursor="hand2"))
+        self.canvas.tag_bind(logout_id, "<Leave>",
+                             lambda e: self.root.config(cursor=""))
 
 
-# Create main window
-root = tk.Tk()
-app = ProfileApp(root)
-root.mainloop()
+
+
+# Run the menu
+if __name__ == "__main__":
+    root = tk.Tk()
+    menu = MenuFrame(root)
+    root.mainloop()
